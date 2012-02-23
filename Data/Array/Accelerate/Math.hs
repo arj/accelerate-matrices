@@ -5,6 +5,10 @@ import Data.Array.Accelerate.Types
 import Data.Array.Unboxed
 import Data.Array.Accelerate as Acc
 
+-- | Returns the inverse of the given vector
+vectorInvertAcc :: AccVector Float -> AccVector Float
+vectorInvertAcc v = Acc.map (1/) v
+
 -- | Dot product for two vectors. Wrapper for non-acc input.
 dotp2Acc :: Vector Float -> Vector Float -> Acc (Scalar Float)
 dotp2Acc xs ys
