@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-
 -- | This module provides the definition of a sparse matrix
 -- and a multiplication.
 module Accelerate.Math.SMVM where
