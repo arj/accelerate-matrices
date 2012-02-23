@@ -38,8 +38,8 @@ smvmAcc (segd, (inds, vals)) vec
     Acc.foldSeg (+) 0 products segd
 
 -- | Sparse-matrix vector multiplication. Wrapper for non-acc input.
-smvm2acc :: SparseMatrix Float -> Vector Float -> Acc (Vector Float)
-smvm2acc (segd', (inds', vals')) vec'
+smvm2Acc :: SparseMatrix Float -> Vector Float -> Acc (Vector Float)
+smvm2Acc (segd', (inds', vals')) vec'
   = let
       segd     = Acc.use segd'
       inds     = Acc.use inds'
