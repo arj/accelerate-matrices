@@ -8,8 +8,8 @@ Synopsis:            Matrices manipulation library for accelerate.
 Homepage:            https://github.com/arj/accelerate-matrices
 License:             BSD3
 License-file:        LICENSE
-Author:              Robert Jakob
-Maintainer:          jakobro@informatik.uni-freiburg.de
+Author:              The Accelerate Team
+Maintainer:          Robert Jakob<jakobro@informatik.uni-freiburg.de>
 Category:            Math, Concurrency
 Build-type:          Simple
 Stability:           Experimental
