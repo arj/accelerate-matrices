@@ -1,6 +1,6 @@
 -- | This modules provides some basic shortcuts
 --   for accelerate-constructor-wrapped types.
-module Accelerate.Types where
+module Data.Array.Accelerate.Types where
 
 import Data.Array.Accelerate
 

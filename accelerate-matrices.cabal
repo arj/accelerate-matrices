@@ -16,13 +16,13 @@ Stability:           Experimental
 Extra-source-files:  INSTALL
 
 Library
-  Exposed-modules:   Accelerate.Math
-                     Accelerate.Math.SMVM
-                     Accelerate.Math.SMVM.Matrix
-                     Accelerate.Math.SMVM.MatrixMarket
-                     Accelerate.Types
+  Exposed-modules:   Data.Array.Accelerate.Math
+                     Data.Array.Accelerate.Math.SMVM
+                     Data.Array.Accelerate.Math.SMVM.Matrix
+                     Data.Array.Accelerate.Math.SMVM.MatrixMarket
+                     Data.Array.Accelerate.Types
 
-  other-modules:     Accelerate.Internal.Random
+  other-modules:     Data.Array.Accelerate.Internal.Random
   
   Build-depends:     accelerate        == 0.9.*,
                      array             >= 0.3,

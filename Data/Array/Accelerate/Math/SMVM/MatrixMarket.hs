@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings, GADTs, StandaloneDeriving #-}
 
-module Accelerate.Math.SMVM.MatrixMarket (Matrix(..), readMatrix) where
+module Data.Array.Accelerate.Math.SMVM.MatrixMarket (Matrix(..), readMatrix) where
 
 import Control.Applicative                      hiding ( many )
 

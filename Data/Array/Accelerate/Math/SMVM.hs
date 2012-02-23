@@ -1,9 +1,9 @@
 -- | This module provides the definition of a sparse matrix
 -- and a multiplication.
-module Accelerate.Math.SMVM where
+module Data.Array.Accelerate.Math.SMVM where
 
-import Accelerate.Math.SMVM.Matrix
-import Accelerate.Types
+import Data.Array.Accelerate.Math.SMVM.Matrix
+import Data.Array.Accelerate.Types
 
 import Data.Array.Unboxed
 import Data.Array.Accelerate           (Vector, Segments, Acc)

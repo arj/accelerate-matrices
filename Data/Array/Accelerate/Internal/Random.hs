@@ -1,6 +1,6 @@
 {-# LANGUAGE BangPatterns, FlexibleContexts #-}
 
-module Accelerate.Internal.Random where
+module Data.Array.Accelerate.Internal.Random where
 
 import System.Random.MWC
 import Data.Array.IArray

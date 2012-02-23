@@ -1,7 +1,7 @@
 -- | This module provides some basic vector operations.
-module Accelerate.Math  where
+module Data.Array.Accelerate.Math  where
 
-import Accelerate.Types
+import Data.Array.Accelerate.Types
 import Data.Array.Unboxed
 import Data.Array.Accelerate as Acc
 

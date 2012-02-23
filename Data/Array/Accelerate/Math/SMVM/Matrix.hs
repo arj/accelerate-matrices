@@ -1,9 +1,9 @@
 {-# LANGUAGE BangPatterns, TupleSections #-}
 
-module Accelerate.Math.SMVM.Matrix (readCSRMatrix, randomCSRMatrix) where
+module Data.Array.Accelerate.Math.SMVM.Matrix (readCSRMatrix, randomCSRMatrix) where
 
-import Accelerate.Internal.Random
-import Accelerate.Math.SMVM.MatrixMarket
+import Data.Array.Accelerate.Internal.Random
+import Data.Array.Accelerate.Math.SMVM.MatrixMarket
 import System.Random.MWC
 import System.IO.Unsafe
 
