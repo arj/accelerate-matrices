@@ -6,7 +6,7 @@ import Data.Array.Accelerate.Math.SMVM.Matrix
 import Data.Array.Accelerate.Types
 
 import Data.Array.Unboxed
-import Data.Array.Accelerate           (Vector, Segments, Acc)
+import Data.Array.Accelerate           (Vector, Segments, Acc, Array)
 import qualified Data.Array.Accelerate as Acc
 import qualified Data.Vector.Unboxed   as V
 
@@ -45,3 +45,16 @@ smvm2Acc (segd', (inds', vals')) vec'
       vec      = Acc.use vec'
     in
       smvmAcc (segd, (inds, vals)) vec
+
+-- | Returns the row number of a given sparse matrix
+-- It is impossible to know the number of columns
+smrows :: Num a => SparseMatrix a -> Int
+smrows (s, _) = Acc.arraySize (Acc.arrayShape s)
+
+-- | Creates a unity matrix of size n*n
+smunity :: Int -> SparseMatrix Float
+smunity n = (segments, (vectors, values))
+ where
+   segments     = Acc.fromList (Acc.Z Acc.:. n) $ take n $ repeat 1
+   vectors      = Acc.fromList (Acc.Z Acc.:. n) [1..n]
+   values       = Acc.fromList (Acc.Z Acc.:. n) $ take n $ repeat 1.0
