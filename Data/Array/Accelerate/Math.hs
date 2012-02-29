@@ -6,18 +6,26 @@ import Data.Array.Unboxed
 import Data.Array.Accelerate as Acc
 
 -- | Returns the inverse of the given vector
-vectorInverseAcc :: AccVector Float -> AccVector Float
+vectorInverseAcc :: (Elt a, IsFloating a) => AccVector a -> AccVector a
 vectorInverseAcc v = Acc.map (1/) v
 
+(*.) :: (Elt a, IsFloating a) => AccScalar a -> AccVector a -> AccVector a
+alpha *. v = Acc.map (the alpha*) v
+
+(./) :: (Elt a, IsFloating a) => AccVector a -> AccScalar a -> AccVector a
+v ./ alpha = Acc.map (the alpha/) v
+
+(/.) :: (Elt a, IsFloating a, Shape sh) => AccScalar a -> Acc (Acc.Array sh a) -> Acc (Acc.Array sh a)
+alpha /. v = Acc.map (the alpha/) v
+
 -- | Dot product for two vectors. Wrapper for non-acc input.
-dotp2Acc :: Vector Float -> Vector Float -> Acc (Scalar Float)
-dotp2Acc xs ys
-  = let
-      xs' = use xs
+dotp2Acc :: (Elt a, IsFloating a) => Vector a -> Vector a -> Acc (Scalar a)
+dotp2Acc xs ys =
+  let xs' = use xs
       ys' = use ys
-    in
+  in
       dotpAcc xs' ys'
 
 -- | Dot product for two vectors.
-dotpAcc :: AccVector Float -> AccVector Float -> AccScalar Float
+dotpAcc :: (Elt a, IsFloating a) => AccVector a -> AccVector a -> AccScalar a
 dotpAcc xs ys = Acc.fold (+) 0 (Acc.zipWith (*) xs ys)
