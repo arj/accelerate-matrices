@@ -9,6 +9,9 @@ import Data.Array.Accelerate as Acc
 vectorInverseAcc :: (Elt a, IsFloating a) => AccVector a -> AccVector a
 vectorInverseAcc v = Acc.map (1/) v
 
+(*^) :: (Elt a, IsFloating a) => AccVector a -> AccVector a -> AccVector a
+(*^) = Acc.zipWith (*)
+
 (*.) :: (Elt a, IsFloating a) => AccScalar a -> AccVector a -> AccVector a
 alpha *. v = Acc.map (the alpha*) v
 
