@@ -140,3 +140,23 @@ smunity2Acc n = (segments, (vectors, values), unit $ constant n)
    segments     = use $ fromList (Z :. n) $ Prelude.take n $ repeat 1
    vectors      = use $ fromList (Z :. n) [1..n]
    values       = use $ fromList (Z :. n) $ Prelude.take n $ repeat 1.0
+
+
+------------------------------
+
+
+sparsedotpAcc :: AccSparseVector Float -> AccSparseVector Float -> AccScalar Float
+sparsedotpAcc (idx1,val1,_) (idx2,val2,_) = A.foldAll (+) 0 $ A.map mapfun m1
+  where
+    v1 = A.zip idx1 val1 :: AccVector (Int, Float)
+    v2 = A.zip idx2 val2 :: AccVector (Int, Float)
+    genfun ix = let Z :. i :. j = unlift ix in lift (v1 A.! index1 i, v2 A.! index1 j)
+    --
+    m1 = generate (lift (Z :. size v1 :. size v2)) genfun
+    --
+    mapfun :: Exp ((Int, Float), (Int, Float)) -> Exp Float
+    mapfun arg = let (ii,jj) = unlift arg :: (Exp (Int, Float), Exp (Int, Float)) in
+                 let (i, vi) = unlift ii  :: (Exp Int, Exp Float) in
+                 let (j, wj) = unlift jj  :: (Exp Int, Exp Float) in
+                 (i ==* j) ? (vi * wj, constant 0)
+
