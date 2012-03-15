@@ -12,6 +12,11 @@ import Data.Array.Accelerate
 import Data.Array.Accelerate as A
 import qualified Data.Array.Accelerate.Array.Sugar as Sugar
 import qualified Data.Vector.Unboxed   as V
+import Prelude hiding (replicate, zip, unzip, map, scanl, scanl1, scanr, scanr1, zipWith,
+                         filter, max, min, not, fst, snd, curry, uncurry, sum, head, tail,
+                         drop, take, null, length, reverse, init, last, product, minimum,
+                         maximum)
+import qualified Prelude
 
 -- | Definition of a sparse vector, i.e. a tuple with the first
 -- entry beeing the column of the entry and the second beeing the
@@ -21,13 +26,13 @@ type SparseVector a = (Vector Int, Vector a)
 -- | Definition of a sparse matrix based on the condensed-row format, i.e.
 -- Segments as the number of non-zero element per row, and a 'SparseVector'
 -- covering the non-zero entries.
-type SparseMatrix a = (Segments Int, SparseVector a)
+type SparseMatrix a = (Segments, SparseVector a)
 
 -- | Wrapper for 'SparseVector' type.
 type AccSparseVector a = ((AccVector Int), (AccVector a))
 
 -- | Wrapper for 'SparseMatrix' type.
-type AccSparseMatrix a = ((AccSegments Int), (AccSparseVector a))
+type AccSparseMatrix a = ((AccSegments), (AccSparseVector a))
 
 -- | Transfers a sparse matrix to accelerate by running use for all components.
 usesm :: (Elt a, IsFloating a) => SparseMatrix a -> AccSparseMatrix a
@@ -61,7 +66,7 @@ fromArray zero arr = toArraySM $ transform arr
     (_ :. row_min :. col_min, _ :. row_max :. col_max) = Sugar.shapeToRange $ arrayShape arr
     rows_i  = [row_min..row_max]
     cols_i  = [col_min..col_max]
-    toArray l = fromList (Z :. length l) l
+    toArray l = fromList (Z :. Prelude.length l) l
     toArraySM (segList, (vecList, valList)) = (toArray segList, (toArray vecList, toArray valList))
     --
     innerTransform arr r = foldr (\c (vec, val) ->
@@ -77,7 +82,7 @@ fromArray zero arr = toArraySM $ transform arr
     transform arr = foldr (\r (seg, (vec, val)) ->
                             let (vec1, val1) = innerTransform arr r
                             in
-                             (length vec1 : seg, (vec1 ++ vec, val1 ++ val))
+                             (Prelude.length vec1 : seg, (vec1 ++ vec, val1 ++ val))
 
                       ) empty rows_i
 
@@ -107,14 +112,14 @@ smrowsAcc (s, _) = size s
 smunity :: Int -> SparseMatrix Float
 smunity n = (segments, (vectors, values))
  where
-   segments     = fromList (Z :. n) $ take n $ repeat 1
+   segments     = fromList (Z :. n) $ Prelude.take n $ repeat 1
    vectors      = fromList (Z :. n) [1..n]
-   values       = fromList (Z :. n) $ take n $ repeat 1.0
+   values       = fromList (Z :. n) $ Prelude.take n $ repeat 1.0
 
 -- | Creates a unity matrix to be used in Accelerate.
 smunity2Acc :: Int -> AccSparseMatrix Float
 smunity2Acc n = (segments, (vectors, values))
  where
-   segments     = use $ fromList (Z :. n) $ take n $ repeat 1
+   segments     = use $ fromList (Z :. n) $ Prelude.take n $ repeat 1
    vectors      = use $ fromList (Z :. n) [1..n]
-   values       = use $ fromList (Z :. n) $ take n $ repeat 1.0
+   values       = use $ fromList (Z :. n) $ Prelude.take n $ repeat 1.0
