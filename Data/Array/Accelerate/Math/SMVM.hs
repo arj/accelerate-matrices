@@ -19,28 +19,35 @@ import Prelude hiding (replicate, zip, unzip, map, scanl, scanl1, scanr, scanr1,
 import qualified Prelude
 
 -- | Definition of a sparse vector, i.e. a tuple with the first
--- entry beeing the column of the entry and the second beeing the
--- entry itself.
-type SparseVector a = (Vector Int, Vector a)
+-- entry beeing the column of the entry, the second beeing the
+-- entry itself, and the third entry is the original size of the
+-- vector.
+--
+type SparseVector a = (Vector Int, Vector a, Int)
 
 -- | Definition of a sparse matrix based on the condensed-row format, i.e.
 -- Segments as the number of non-zero element per row, and a 'SparseVector'
--- covering the non-zero entries.
-type SparseMatrix a = (Segments, SparseVector a)
+-- (without the size) covering the non-zero entries. The last entry
+-- is the number of columns from the original matrix. The number of
+-- rows can be extracted by length segments.
+--
+type SparseMatrix a = (Segments, (Vector Int, Vector a), Int)
 
 -- | Wrapper for 'SparseVector' type.
-type AccSparseVector a = ((AccVector Int), (AccVector a))
+--
+type AccSparseVector a = (AccVector Int, AccVector a, AccScalar Int)
 
 -- | Wrapper for 'SparseMatrix' type.
-type AccSparseMatrix a = ((AccSegments), (AccSparseVector a))
+--
+type AccSparseMatrix a = (AccSegments, (AccVector Int, AccVector a), AccScalar Int)
 
 -- | Transfers a sparse matrix to accelerate by running use for all components.
 usesm :: (Elt a, IsFloating a) => SparseMatrix a -> AccSparseMatrix a
-usesm (segments, (vectors, values)) = (use segments, (use vectors, use values))
+usesm (segments, (vectors, values), size) = (use segments, (use vectors, use values), unit (constant size))
 
 -- | Sparse-matrix vector multiplication
 smvmAcc :: AccSparseMatrix Float -> AccVector Float -> AccVector Float
-smvmAcc (segd, (inds, vals)) vec
+smvmAcc (segd, (inds, vals), _) vec
   = let
       vecVals  = backpermute (shape inds) (\i -> index1 $ inds A.! i) vec
       products = A.zipWith (*) vecVals vals
@@ -49,25 +56,26 @@ smvmAcc (segd, (inds, vals)) vec
 
 -- | Sparse-matrix vector multiplication. Wrapper for non-acc input.
 smvm2Acc :: SparseMatrix Float -> Vector Float -> Acc (Vector Float)
-smvm2Acc (segd', (inds', vals')) vec'
+smvm2Acc (segd', (inds', vals'), cols') vec'
   = let
       segd     = use segd'
       inds     = use inds'
       vals     = use vals'
       vec      = use vec'
+      cols     = unit $ constant cols'
     in
-      smvmAcc (segd, (inds, vals)) vec
+      smvmAcc (segd, (inds, vals), cols) vec
 
 -- | Builds a sparse matrix from an Accelerate 'A.Array' with an arbitrary sparse element.
 fromArray :: (Eq a, Elt a, IsFloating a) => a -> A.Array DIM2 a -> SparseMatrix a
 fromArray zero arr = toArraySM $ transform arr
   where
-    empty   = ([], ([], []))
+    empty   = ([], ([], []),0)
     (_ :. row_min :. col_min, _ :. row_max :. col_max) = Sugar.shapeToRange $ arrayShape arr
     rows_i  = [row_min..row_max]
     cols_i  = [col_min..col_max]
     toArray l = fromList (Z :. Prelude.length l) l
-    toArraySM (segList, (vecList, valList)) = (toArray segList, (toArray vecList, toArray valList))
+    toArraySM (segList, (vecList, valList), cols) = (toArray segList, (toArray vecList, toArray valList), cols)
     --
     innerTransform arr r = foldr (\c (vec, val) ->
                                             let e = indexArray arr (Z :. r :. c) in
@@ -79,10 +87,10 @@ fromArray zero arr = toArraySM $ transform arr
                                           ) ([],[]) cols_i
 
     --
-    transform arr = foldr (\r (seg, (vec, val)) ->
+    transform arr = foldr (\r (seg, (vec, val), _) ->
                             let (vec1, val1) = innerTransform arr r
                             in
-                             (Prelude.length vec1 : seg, (vec1 ++ vec, val1 ++ val))
+                             (Prelude.length vec1 : seg, (vec1 ++ vec, val1 ++ val), (col_max - col_min + 1))
 
                       ) empty rows_i
 
@@ -91,16 +99,25 @@ fromArray zero arr = toArraySM $ transform arr
 fromArrayZero :: forall a.(Eq a, Elt a, IsFloating a, Fractional a) => A.Array DIM2 a -> SparseMatrix a
 fromArrayZero = fromArray (0.0 :: a)
 
-
--- | Returns the row number of a given sparse matrix
--- It is impossible to know the number of columns
+-- | Returns the row count of a given sparse matrix
+--
 smrows :: Num a => SparseMatrix a -> Int
-smrows (s, _) = arraySize (arrayShape s)
+smrows (s, _, _) = arraySize (arrayShape s)
 
--- | Calculates the row number of an accelerate wrapped sparse matrix.
--- It is impossible to know the number of columns.
+-- | Calculates the row count of an accelerate wrapped sparse matrix.
+--
 smrowsAcc :: Num a => AccSparseMatrix a -> Exp Int
-smrowsAcc (s, _) = size s
+smrowsAcc (s, _, _) = size s
+
+-- | Returns the col count of a given sparse matrix
+--
+smcols :: Num a => SparseMatrix a -> Int
+smcols (_, _, cols) = cols
+
+-- | Calculates the col count of an accelerate wrapped sparse matrix.
+--
+smcolsAcc :: Num a => AccSparseMatrix a -> Exp Int
+smcolsAcc (_, _, cols) = the cols
 
 -- TODO
 -- smmul :: (Num a) => SparseMatrix a -> SparseMatrix a -> SparseVector a
@@ -110,7 +127,7 @@ smrowsAcc (s, _) = size s
 
 -- | Creates a unity matrix of size n*n
 smunity :: Int -> SparseMatrix Float
-smunity n = (segments, (vectors, values))
+smunity n = (segments, (vectors, values), n)
  where
    segments     = fromList (Z :. n) $ Prelude.take n $ repeat 1
    vectors      = fromList (Z :. n) [1..n]
@@ -118,7 +135,7 @@ smunity n = (segments, (vectors, values))
 
 -- | Creates a unity matrix to be used in Accelerate.
 smunity2Acc :: Int -> AccSparseMatrix Float
-smunity2Acc n = (segments, (vectors, values))
+smunity2Acc n = (segments, (vectors, values), unit $ constant n)
  where
    segments     = use $ fromList (Z :. n) $ Prelude.take n $ repeat 1
    vectors      = use $ fromList (Z :. n) [1..n]
