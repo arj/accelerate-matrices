@@ -18,6 +18,8 @@ import Prelude hiding (replicate, zip, unzip, map, scanl, scanl1, scanr, scanr1,
                          maximum)
 import qualified Prelude
 
+import Debug.Trace
+
 -- | Definition of a sparse vector, i.e. a tuple with the first
 -- entry beeing the column of the entry, the second beeing the
 -- entry itself, and the third entry is the original size of the
@@ -42,7 +44,7 @@ type AccSparseVector a = (AccVector Int, AccVector a, AccScalar Int)
 type AccSparseMatrix a = (AccSegments, (AccVector Int, AccVector a), AccScalar Int)
 
 -- | Transfers a sparse matrix to accelerate by running use for all components.
-usesm :: (Elt a, IsFloating a) => SparseMatrix a -> AccSparseMatrix a
+usesm :: (Elt a) => SparseMatrix a -> AccSparseMatrix a
 usesm (segments, (vectors, values), size) = (use segments, (use vectors, use values), unit (constant size))
 
 -- | Sparse-matrix vector multiplication
@@ -67,7 +69,7 @@ smvm2Acc (segd', (inds', vals'), cols') vec'
       smvmAcc (segd, (inds, vals), cols) vec
 
 -- | Builds a sparse matrix from an Accelerate 'A.Array' with an arbitrary sparse element.
-fromArray :: (Eq a, Elt a, IsFloating a) => a -> A.Array DIM2 a -> SparseMatrix a
+fromArray :: (Eq a, Elt a) => a -> A.Array DIM2 a -> SparseMatrix a
 fromArray zero arr = toArraySM $ transform arr
   where
     empty   = ([], ([], []),0)
@@ -144,6 +146,7 @@ smunity2Acc n = (segments, (vectors, values), unit $ constant n)
 
 ------------------------------
 
+-- generateIndexValueMatrix
 
 sparsedotpAcc :: AccSparseVector Float -> AccSparseVector Float -> AccScalar Float
 sparsedotpAcc (idx1,val1,_) (idx2,val2,_) = A.foldAll (+) 0 $ A.map mapfun m1
@@ -160,3 +163,30 @@ sparsedotpAcc (idx1,val1,_) (idx2,val2,_) = A.foldAll (+) 0 $ A.map mapfun m1
                  let (j, wj) = unlift jj  :: (Exp Int, Exp Float) in
                  (i ==* j) ? (vi * wj, constant 0)
 
+
+-- | Sparse vector product. The returned vector may not be sparse, i.e. it may contain
+-- values with value 0.0.
+-- TODO Filter result array.
+sparsevectorproductAcc :: AccSparseVector Float -> AccSparseVector Float -> AccSparseVector Float
+sparsevectorproductAcc (idx1,val1,cnt1) (idx2,val2,_) = addcnt cnt1 $ unzip $ A.fold1 addfun $ A.map mapfun m1
+  where
+    v1 = A.zip idx1 val1 :: AccVector (Int, Float)
+    v2 = A.zip idx2 val2 :: AccVector (Int, Float)
+    genfun ix = let Z :. i :. j = unlift ix in lift (v1 A.! index1 i, v2 A.! index1 j)
+    --
+    m1 = generate (lift (Z :. size v1 :. size v2)) genfun
+    --
+    mapfun :: Exp ((Int, Float), (Int, Float)) -> Exp (Int,Float)
+    mapfun arg = let (ii,jj) = unlift arg :: (Exp (Int, Float), Exp (Int, Float)) in
+                 let (i, vi) = unlift ii  :: (Exp Int, Exp Float) in
+                 let (j, wj) = unlift jj  :: (Exp Int, Exp Float) in
+                 let res  = lift (i,vi * wj) :: Exp(Int, Float) in
+                 let res2 = lift (i,0 :: Float) in
+                 (i ==* j) ? (res, res2)
+    --
+    addcnt cnt (idx,val) = (idx,val,cnt)
+    --
+    addfun :: Exp (Int, Float) -> Exp (Int, Float) -> Exp (Int, Float)
+    addfun ack val = let (acki, ackv) = unlift ack :: (Exp Int, Exp Float) in
+                     let (i,v) = unlift val :: (Exp Int, Exp Float) in
+                     lift (i, ackv + v) :: Exp (Int, Float)
